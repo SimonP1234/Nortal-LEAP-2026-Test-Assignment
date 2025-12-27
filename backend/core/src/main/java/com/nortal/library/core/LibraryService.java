@@ -64,8 +64,25 @@ public class LibraryService {
     }
     entity.setLoanedTo(null);
     entity.setDueDate(null);
-    String nextMember =
-        entity.getReservationQueue().isEmpty() ? null : entity.getReservationQueue().get(0);
+
+    String nextMember = null;
+
+    while (!entity.getReservationQueue().isEmpty()) {
+      String candidateId = entity.getReservationQueue().remove(0);
+
+      if (!memberRepository.existsById(candidateId)) {
+        continue;
+      }
+      if (!canMemberBorrow(candidateId)) {
+        continue;
+      }
+
+      entity.setLoanedTo(candidateId);
+      entity.setDueDate(LocalDate.now().plusDays(DEFAULT_LOAN_DAYS));
+      nextMember = candidateId;
+      break;
+    }
+
     bookRepository.save(entity);
     return ResultWithNext.success(nextMember);
   }
@@ -80,6 +97,15 @@ public class LibraryService {
     }
 
     Book entity = book.get();
+
+    if (entity.getReservationQueue().contains(memberId)) {
+      return Result.failure("ALREADY_RESERVED");
+    }
+
+    if (entity.getLoanedTo() == null && entity.getReservationQueue().isEmpty()) {
+      return borrowBook(bookId, memberId);
+    }
+
     entity.getReservationQueue().add(memberId);
     bookRepository.save(entity);
     return Result.success();
