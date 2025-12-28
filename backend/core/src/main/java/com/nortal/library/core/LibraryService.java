@@ -130,17 +130,12 @@ public class LibraryService {
   }
 
   public boolean canMemberBorrow(String memberId) {
-    if (!memberRepository.existsById(memberId)) {
+    if (!memberRepository.existsById(memberId)){
       return false;
     }
-    int active = 0;
-    for (Book book : bookRepository.findAll()) {
-      if (memberId.equals(book.getLoanedTo())) {
-        active++;
-      }
-    }
-    return active < MAX_LOANS;
+    return bookRepository.countByLoanedTo(memberId) < MAX_LOANS;
   }
+
 
   public List<Book> searchBooks(String titleContains, Boolean availableOnly, String loanedTo) {
     return bookRepository.findAll().stream()
